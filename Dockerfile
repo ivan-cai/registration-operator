@@ -1,13 +1,16 @@
-FROM registry.ci.openshift.org/open-cluster-management/builder:go1.17-linux AS builder
+FROM golang:1.17 AS builder
+
+ARG ARCH
+
 WORKDIR /go/src/open-cluster-management.io/registration-operator
 COPY . .
 ENV GO_PACKAGE open-cluster-management.io/registration-operator
-RUN make build --warn-undefined-variables
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -v --ldflags ' -extldflags "-static"' -o registration-operator  ./cmd/registration-operator/main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM alpine:latest
 ENV USER_UID=10001
 
 COPY --from=builder /go/src/open-cluster-management.io/registration-operator/registration-operator /
-RUN microdnf update && microdnf clean all
+#RUN microdnf update && microdnf clean all
 
 USER ${USER_UID}
